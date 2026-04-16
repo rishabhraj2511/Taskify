@@ -1,0 +1,204 @@
+import { useLocation } from 'react-router-dom';
+import { Search, Bell, Plus, Sparkles, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+
+const pageTitles = {
+  '/':           { title: 'Dashboard',  subtitle: 'Welcome back — here\'s what\'s happening today' },
+  '/tasks':      { title: 'Tasks',      subtitle: 'Manage your kanban board and track progress' },
+  '/team':       { title: 'Team',       subtitle: 'Your team performance and leaderboard' },
+  '/analytics':  { title: 'Analytics',  subtitle: 'Deep dive into productivity metrics' },
+  '/notifications': { title: 'Notifications', subtitle: 'Review and manage recent alerts' },
+  '/settings': { title: 'Settings', subtitle: 'Customize your workspace preferences' },
+};
+
+export default function Navbar({
+  notifications = [],
+  onAddTask,
+  searchQuery = '',
+  onSearchChange,
+  onMarkAllNotificationsRead,
+  onMarkNotificationRead,
+}) {
+  const location = useLocation();
+  const [showNotifs, setShowNotifs] = useState(false);
+  const page = pageTitles[location.pathname] || pageTitles['/'];
+  const unread = notifications.filter(n => !n.read).length;
+
+  const notifColors = {
+    warning: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', dot: '#f59e0b' },
+    danger:  { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.25)',  dot: '#ef4444' },
+    info:    { bg: 'rgba(37,99,235,0.12)',   border: 'rgba(37,99,235,0.25)',  dot: '#3b82f6' },
+    success: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', dot: '#10b981' },
+  };
+
+  return (
+    <header style={{
+      position: 'fixed',
+      top: 0,
+      left: '240px',
+      right: 0,
+      height: '64px',
+      background: 'rgba(2, 6, 23, 0.85)',
+      backdropFilter: 'blur(24px)',
+      borderBottom: '1px solid rgba(30,58,95,0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      paddingInline: '24px',
+      gap: '16px',
+      zIndex: 40,
+    }}>
+      {/* Page Title */}
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>
+            {page.title}
+          </h1>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            background: 'rgba(124,58,237,0.12)',
+            border: '1px solid rgba(124,58,237,0.2)',
+            borderRadius: '6px', padding: '2px 8px',
+          }}>
+            <TrendingUp size={10} color="#a78bfa" />
+            <span style={{ fontSize: '0.65rem', color: '#a78bfa', fontWeight: 600 }}>Live</span>
+          </div>
+        </div>
+        <p style={{ fontSize: '0.72rem', color: '#475569', marginTop: '1px' }}>{page.subtitle}</p>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        background: 'rgba(10,22,40,0.8)',
+        border: '1px solid rgba(30,58,95,0.6)',
+        borderRadius: '10px', padding: '8px 14px',
+        width: '220px',
+        transition: 'all 0.2s',
+      }}>
+        <Search size={14} color="#475569" />
+        <input
+          value={searchQuery}
+          onChange={(e) => onSearchChange?.(e.target.value)}
+          placeholder="Search tasks..."
+          style={{
+            background: 'none', border: 'none', outline: 'none',
+            color: '#94a3b8', fontSize: '0.8rem', width: '100%',
+          }}
+        />
+      </div>
+
+      {/* AI Insight chip */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(37,99,235,0.1))',
+        border: '1px solid rgba(124,58,237,0.25)',
+        borderRadius: '8px', padding: '6px 10px',
+        cursor: 'pointer',
+      }}>
+        <Sparkles size={13} color="#a78bfa" />
+        <span style={{ fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>AI Insights</span>
+      </div>
+
+      {/* Add Task Button */}
+      {location.pathname === '/tasks' && (
+        <button className="btn-primary" onClick={onAddTask} style={{ whiteSpace: 'nowrap' }}>
+          <Plus size={15} />
+          New Task
+        </button>
+      )}
+
+      {/* Notifications */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setShowNotifs(v => !v)}
+          style={{
+            position: 'relative',
+            width: '38px', height: '38px',
+            borderRadius: '10px',
+            background: showNotifs ? 'rgba(124,58,237,0.15)' : 'rgba(10,22,40,0.8)',
+            border: `1px solid ${showNotifs ? 'rgba(124,58,237,0.35)' : 'rgba(30,58,95,0.6)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Bell size={16} color={showNotifs ? '#a78bfa' : '#64748b'} />
+          {unread > 0 && (
+            <span style={{
+              position: 'absolute', top: '-4px', right: '-4px',
+              width: '17px', height: '17px',
+              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+              borderRadius: '50%',
+              fontSize: '0.6rem', fontWeight: 700, color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 10px rgba(239,68,68,0.5)',
+              border: '2px solid #020617',
+            }}>
+              {unread}
+            </span>
+          )}
+        </button>
+
+        {showNotifs && (
+          <div style={{
+            position: 'absolute', top: '46px', right: 0,
+            width: '340px',
+            background: 'rgba(5,12,26,0.97)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(30,58,95,0.6)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            padding: '0',
+            zIndex: 100,
+            animation: 'slideUp 0.2s ease-out',
+          }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid rgba(30,58,95,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, color: 'white', fontSize: '0.875rem' }}>Notifications</span>
+              <button
+                onClick={() => onMarkAllNotificationsRead?.()}
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#6366f1',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                }}
+              >
+                Mark all read
+              </button>
+            </div>
+            <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+              {notifications.map(n => {
+                const c = notifColors[n.type] || notifColors.info;
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => onMarkNotificationRead?.(n.id)}
+                    style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid rgba(30,58,95,0.2)',
+                    background: n.read ? 'rgba(10,22,40,0.55)' : c.bg,
+                    display: 'flex', gap: '10px',
+                    transition: 'background 0.2s',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                    border: 'none',
+                  }}
+                  >
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: n.read ? '#334155' : c.dot, marginTop: '5px', flexShrink: 0, boxShadow: n.read ? 'none' : `0 0 6px ${c.dot}` }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '0.78rem', color: n.read ? '#64748b' : '#cbd5e1', lineHeight: '1.4' }}>{n.message}</p>
+                      <p style={{ fontSize: '0.68rem', color: '#475569', marginTop: '4px' }}>{n.time}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}

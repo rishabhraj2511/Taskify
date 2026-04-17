@@ -105,9 +105,11 @@ export default function MainLayout() {
       .join('|');
 
     if (overdueKey && overdueKey !== lastAutoAlerts.current.overdueKey) {
-      addNotification({
-        type: 'warning',
-        message: `${overdueTasks.length} task${overdueTasks.length > 1 ? 's are' : ' is'} overdue.`,
+      queueMicrotask(() => {
+        addNotification({
+          type: 'warning',
+          message: `${overdueTasks.length} task${overdueTasks.length > 1 ? 's are' : ' is'} overdue.`,
+        });
       });
       lastAutoAlerts.current.overdueKey = overdueKey;
     }
@@ -116,9 +118,11 @@ export default function MainLayout() {
     const burnoutKey = burnout.isBurnoutRisk ? `${burnout.peakDate}:${burnout.peakCount}` : '';
 
     if (burnoutKey && burnoutKey !== lastAutoAlerts.current.burnoutKey) {
-      addNotification({
-        type: 'danger',
-        message: `Burnout risk: ${burnout.peakCount} tasks due on ${new Date(burnout.peakDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+      queueMicrotask(() => {
+        addNotification({
+          type: 'danger',
+          message: `Burnout risk: ${burnout.peakCount} tasks due on ${new Date(burnout.peakDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+        });
       });
       lastAutoAlerts.current.burnoutKey = burnoutKey;
     }

@@ -1,7 +1,7 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, CheckSquare, Users, BarChart3,
-  Zap, Bell, Settings, ChevronRight, Sparkles
+  Zap, Bell, Settings, ChevronRight, Sparkles, LogOut
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +15,16 @@ const navItems = [
 
 export default function Sidebar({ unreadCount = 0 }) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('taskify.user');
+    navigate('/login');
+  };
+
+  const userRecord = JSON.parse(localStorage.getItem('taskify.user') || '{}');
+  const userName = userRecord.name || 'User';
+  const userRole = userRecord.role ? userRecord.role.replace('_', ' ') : 'Member';
 
   return (
     <aside
@@ -107,7 +117,6 @@ export default function Sidebar({ unreadCount = 0 }) {
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          cursor: 'pointer',
           transition: 'all 0.2s',
         }}>
           <div style={{
@@ -115,14 +124,22 @@ export default function Sidebar({ unreadCount = 0 }) {
             background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '0.75rem', fontWeight: 700, color: 'white',
+            flexShrink: 0
           }}>
-            YO
+            {userName.substring(0, 2).toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              You
+              {userName}
             </div>
-            <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Admin</div>
+            <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'capitalize' }}>{userRole.toLowerCase()}</div>
+          </div>
+          <div
+            onClick={handleLogout}
+            style={{ cursor: 'pointer', padding: '4px' }}
+            title="Logout"
+          >
+            <LogOut size={16} color="#ef4444" />
           </div>
         </div>
 

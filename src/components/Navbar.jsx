@@ -24,6 +24,11 @@ export default function Navbar({
   const page = pageTitles[location.pathname] || pageTitles['/'];
   const unread = notifications.filter(n => !n.read).length;
 
+  const userRecord = JSON.parse(localStorage.getItem('taskify.user') || '{}');
+  const userRole = userRecord.role || 'TEAM_MEMBER';
+  // Only leads, PMs and DMs can create tasks
+  const canCreateTask = ['TEAM_LEAD', 'PROJECT_MANAGER', 'DELIVERY_MANAGER'].includes(userRole);
+
   const notifColors = {
     warning: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', dot: '#f59e0b' },
     danger:  { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.25)',  dot: '#ef4444' },
@@ -100,7 +105,7 @@ export default function Navbar({
       </div>
 
       {/* Add Task Button */}
-      {location.pathname === '/tasks' && (
+      {location.pathname === '/tasks' && canCreateTask && (
         <button className="btn-primary" onClick={onAddTask} style={{ whiteSpace: 'nowrap' }}>
           <Plus size={15} />
           New Task

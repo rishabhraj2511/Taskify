@@ -1,7 +1,8 @@
+import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { CheckCircle2, Clock, TrendingUp, Users, BarChart2, Target } from 'lucide-react';
+import { CheckCircle2, Clock, TrendingUp, Users, Trophy, Briefcase } from 'lucide-react';
 import Card from '../components/Card';
-import { teamMembers, weeklyData, projectStats } from '../data/dummyData';
+import { initialTeams, initialProjects, teamMembers } from '../data/dummyData';
 import { buildLiveMemberStats } from '../utils/teamInsights';
 
 function StatCard({ icon, label, value, sub, color, gradient = false }) {
@@ -18,7 +19,7 @@ function StatCard({ icon, label, value, sub, color, gradient = false }) {
           width: '42px', height: '42px', borderRadius: '12px',
           background: `linear-gradient(135deg, ${color})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 0 20px ${color.split(',')[0].replace('rgba(', '').split(')')[0]}`,
+          boxShadow: `0 0 20px ${color.split(',')[0].replace('rgba(', '').replace(')', '')}`,
           flexShrink: 0,
         }}>
           <Icon size={20} color="white" />
@@ -28,196 +29,328 @@ function StatCard({ icon, label, value, sub, color, gradient = false }) {
   );
 }
 
-function MiniBar({ label, value, max, color }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-        <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{label}</span>
-        <span style={{ fontSize: '0.78rem', color: 'white', fontWeight: 600 }}>{value}</span>
-      </div>
-      <div style={{ height: '6px', background: 'rgba(30,58,95,0.5)', borderRadius: '3px', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '3px', transition: 'width 0.3s' }} />
-      </div>
-    </div>
-  );
+function Rank({ rank }) {
+  if (rank === 1) return <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fbbf24' }}>🏆 1st</span>;
+  if (rank === 2) return <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#94a3b8' }}>🥈 2nd</span>;
+  if (rank === 3) return <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#cd7c2d' }}>🥉 3rd</span>;
+  return null;
 }
 
 export default function Dashboard() {
-  const { tasks } = useOutletContext();
+  const context = useOutletContext() || {};
+  const { tasks: outletTasks } = context;
+  const [user] = useState(() => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('taskify.user') || 'null');
+      return currentUser && currentUser.role ? currentUser : null;
+    } catch {
+      return null;
+    }
+  });
+  const [teams] = useState(() => {
+    try {
+      const allTeams = JSON.parse(localStorage.getItem('taskify.teams') || '[]');
+      return allTeams.length > 0 ? allTeams : initialTeams;
+    } catch {
+      return initialTeams;
+    }
+  });
+  const [projects] = useState(() => {
+    try {
+      const allProjects = JSON.parse(localStorage.getItem('taskify.projects') || '[]');
+      return allProjects.length > 0 ? allProjects : initialProjects;
+    } catch {
+      return initialProjects;
+    }
+  });
 
-  const totalTodo = tasks.todo.length;
-  const totalIP = tasks.inprogress.length;
-  const totalDone = tasks.done.length;
+  // Use outlet tasks or fallback to localStorage
+  const tasks = outletTasks || (() => {
+    const TASKS_STORAGE_KEY = 'taskify.tasks.v1';
+    const stored = localStorage.getItem(TASKS_STORAGE_KEY);
+    try {
+      return stored ? JSON.parse(stored) : { todo: [], inprogress: [], done: [] };
+    } catch {
+      return { todo: [], inprogress: [], done: [] };
+    }
+  })();
+
+  // Calculate stats
+  const totalTodo = tasks?.todo?.length || 0;
+  const totalIP = tasks?.inprogress?.length || 0;
+  const totalDone = tasks?.done?.length || 0;
   const totalTasks = totalTodo + totalIP + totalDone;
   const productivity = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
-  const topPerformers = buildLiveMemberStats(tasks, teamMembers)
-    .sort((a, b) => b.livePoints - a.livePoints)
-    .slice(0, 3);
+  // Get top performers
+  const topMembers = useMemo(() => {
+    return buildLiveMemberStats(tasks, teamMembers)
+      .sort((a, b) => b.livePoints - a.livePoints)
+      .slice(0, 3);
+  }, [tasks]);
+
+  // Get top teams
+  const topTeams = useMemo(() => {
+    return [...teams]
+      .sort((a, b) => b.performanceScore - a.performanceScore)
+      .slice(0, 3);
+  }, [teams]);
+
+  // Get team lead data
+  const teamLeadTeam = useMemo(() => {
+    if (user?.role === 'TEAM_LEAD') {
+      return teams.find(t => t.leadDetails?.email === user?.email);
+    }
+    return null;
+  }, [user, teams]);
+
+  const teamLeadMembers = useMemo(() => {
+    if (teamLeadTeam) {
+      const teamMemberIds = teamLeadTeam.members || [];
+      const members = teamMembers.filter(m => teamMemberIds.includes(m.id));
+      return buildLiveMemberStats(tasks, members)
+        .sort((a, b) => b.livePoints - a.livePoints)
+        .slice(0, 3);
+    }
+    return [];
+  }, [teamLeadTeam, tasks]);
+
+  if (!user) {
+    return <div style={{ color: '#94a3b8' }}>Loading...</div>;
+  }
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
-          Dashboard
+          {user.role === 'MANAGER' ? 'Manager Dashboard' : user.role === 'TEAM_LEAD' ? 'Team Lead Dashboard' : 'My Dashboard'}
         </h2>
         <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px' }}>
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Welcome, {user.name} • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
-      {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <StatCard
-          icon={CheckCircle2}
-          label="Completed"
-          value={totalDone}
-          sub={`+${Math.max(0, totalDone - 5)} this week`}
-          color="rgba(16,185,129,0.7), rgba(5,150,105,0.9)"
-        />
-        <StatCard
-          icon={Clock}
-          label="Pending"
-          value={totalTodo + totalIP}
-          sub={`${totalIP} in progress`}
-          color="rgba(245,158,11,0.7), rgba(217,119,6,0.9)"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Productivity"
-          value={`${productivity}%`}
-          sub="Completion rate"
-          color="rgba(124,58,237,0.7), rgba(37,99,235,0.9)"
-          gradient
-        />
-      </div>
-
-      {/* Main content grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-        {/* Weekly Chart */}
-        <Card style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>Weekly Activity</h3>
-            <div style={{ display: 'flex', gap: '12px', fontSize: '0.7rem', color: '#64748b' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#7c3aed', display: 'inline-block' }} />
-                Completed
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#1e3a5f', display: 'inline-block' }} />
-                Added
-              </span>
-            </div>
+      {/* ─── MANAGER VIEW ─── */}
+      {user.role === 'MANAGER' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <StatCard
+              icon={Users}
+              label="Total Teams"
+              value={teams.length}
+              sub={`${projects.length} projects`}
+              color="rgba(124,58,237,0.7), rgba(37,99,235,0.9)"
+              gradient
+            />
+            <StatCard
+              icon={Briefcase}
+              label="Active Projects"
+              value={projects.filter(p => p.status === 'in-progress').length}
+              sub={`${projects.length} total`}
+              color="rgba(59,130,246,0.7), rgba(29,78,216,0.9)"
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Completed Tasks"
+              value={totalDone}
+              sub={`${productivity}% rate`}
+              color="rgba(16,185,129,0.7), rgba(5,150,105,0.9)"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Avg Performance"
+              value={`${Math.round((teams.reduce((sum, t) => sum + t.performanceScore, 0) / teams.length) || 0)}%`}
+              sub="Team average"
+              color="rgba(245,158,11,0.7), rgba(217,119,6,0.9)"
+            />
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '100px' }}>
-            {weeklyData.map((d) => {
-              const maxVal = Math.max(...weeklyData.map(x => x.completed), 1);
-              const pctCompleted = (d.completed / maxVal) * 100;
-              const pctAdded = (d.added / maxVal) * 100;
-              return (
-                <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '80px', width: '100%' }}>
-                    <div style={{
-                      flex: 1, background: 'linear-gradient(180deg, #7c3aed, #5b21b6)',
-                      height: `${pctCompleted}%`, borderRadius: '4px 4px 0 0',
-                    }} />
-                    <div style={{
-                      flex: 1, background: 'rgba(30,58,95,0.8)',
-                      height: `${pctAdded}%`, borderRadius: '4px 4px 0 0',
-                    }} />
+
+          {/* Top 3 Teams */}
+          <Card style={{ padding: '24px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <Trophy size={20} color="#fbbf24" />
+              <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top 3 Performing Teams</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {topTeams.map((team, idx) => (
+                <div key={team.id} style={{
+                  background: 'rgba(10,22,40,0.8)',
+                  border: '1px solid rgba(30,58,95,0.5)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <Rank rank={idx + 1} />
                   </div>
-                  <span style={{ fontSize: '0.65rem', color: '#475569' }}>{d.day}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Project Progress */}
-        <Card style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>Project Progress</h3>
-            <Target size={16} color="#64748b" />
-          </div>
-          <div>
-            {projectStats.map(p => (
-              <div key={p.name} style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div>
-                    <span style={{ fontSize: '0.82rem', color: 'white', fontWeight: 600 }}>{p.name}</span>
-                    <span style={{ fontSize: '0.68rem', color: '#475569', marginLeft: '8px' }}>{p.tasks} tasks · {p.team} devs</span>
+                  <h4 style={{ color: 'white', fontWeight: 700, marginBottom: '8px' }}>{team.name}</h4>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '12px' }}>
+                    Lead: {team.leadDetails?.name}
+                  </p>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
+                    fontSize: '0.8rem', color: '#cbd5e1',
+                  }}>
+                    <div>Tasks: <span style={{ color: '#a78bfa', fontWeight: 700 }}>{team.tasksCompleted}</span></div>
+                    <div>Score: <span style={{ color: '#7c3aed', fontWeight: 700 }}>{team.performanceScore}%</span></div>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>{p.progress}%</span>
                 </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${p.progress}%`, background: `linear-gradient(90deg, ${p.color.replace('from-', '').replace(' to-', ', ')})` }} />
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ─── TEAM LEAD VIEW ─── */}
+      {user.role === 'TEAM_LEAD' && teamLeadTeam && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <StatCard
+              icon={Users}
+              label="Team Members"
+              value={teamLeadTeam.members?.length || 0}
+              sub={`In ${teamLeadTeam.name}`}
+              color="rgba(124,58,237,0.7), rgba(37,99,235,0.9)"
+              gradient
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Tasks Done"
+              value={teamLeadTeam.tasksCompleted}
+              sub="This period"
+              color="rgba(16,185,129,0.7), rgba(5,150,105,0.9)"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Team Performance"
+              value={`${teamLeadTeam.performanceScore}%`}
+              sub="Overall score"
+              color="rgba(245,158,11,0.7), rgba(217,119,6,0.9)"
+            />
+            <StatCard
+              icon={Briefcase}
+              label="Total Points"
+              value={teamLeadTeam.totalPoints?.toLocaleString()}
+              sub="Contribution"
+              color="rgba(168,85,247,0.7), rgba(126,34,206,0.9)"
+            />
+          </div>
+
+          {/* Top 3 Team Members */}
+          <Card style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <Trophy size={20} color="#fbbf24" />
+              <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top 3 Team Members</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {teamLeadMembers.map((member, idx) => (
+                <div key={member.id} style={{
+                  background: 'rgba(10,22,40,0.8)',
+                  border: '1px solid rgba(30,58,95,0.5)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <Rank rank={idx + 1} />
+                  </div>
+                  <div style={{
+                    width: '48px', height: '48px',
+                    borderRadius: '12px',
+                    background: `linear-gradient(135deg, ${member.color})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontWeight: 700, fontSize: '1rem',
+                    margin: '0 auto 12px',
+                  }}>
+                    {member.avatar}
+                  </div>
+                  <h4 style={{ color: 'white', fontWeight: 700, marginBottom: '4px' }}>{member.name}</h4>
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px' }}>{member.role}</p>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
+                    fontSize: '0.8rem', color: '#cbd5e1',
+                  }}>
+                    <div>Points: <span style={{ color: '#60a5fa', fontWeight: 700 }}>{member.livePoints}</span></div>
+                    <div>Tasks: <span style={{ color: '#34d399', fontWeight: 700 }}>{member.liveCompleted}</span></div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* Bottom row: Team members + Task distribution */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* Team Overview */}
-        <Card style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>Team Members</h3>
-            <Users size={16} color="#64748b" />
-          </div>
-          {topPerformers.map((m, i) => (
-            <div key={m.id} style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              padding: '10px 0',
-              borderBottom: i < 2 ? '1px solid rgba(30,58,95,0.3)' : 'none',
-            }}>
-              <div style={{
-                width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                background: `linear-gradient(135deg, ${m.color.replace('from-', '').replace(' to-', ', ')})`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.7rem', fontWeight: 700, color: 'white',
-              }}>
-                {m.avatar}
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'white' }}>{m.name}</p>
-                <p style={{ fontSize: '0.68rem', color: '#64748b' }}>{m.role}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981' }}>{m.liveCompleted}</p>
-                <p style={{ fontSize: '0.65rem', color: '#64748b' }}>done</p>
-              </div>
+              ))}
             </div>
-          ))}
-        </Card>
+          </Card>
+        </>
+      )}
 
-        {/* Quick Stats */}
-        <Card style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}>Task Distribution</h3>
-            <BarChart2 size={16} color="#64748b" />
+      {/* ─── TEAM MEMBER & PROJECT MANAGER VIEW ─── */}
+      {(user.role === 'TEAM_MEMBER' || user.role === 'PROJECT_MANAGER') && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <StatCard
+              icon={CheckCircle2}
+              label="Completed"
+              value={totalDone}
+              sub={`+${Math.max(0, totalDone - 5)} this week`}
+              color="rgba(16,185,129,0.7), rgba(5,150,105,0.9)"
+            />
+            <StatCard
+              icon={Clock}
+              label="Pending"
+              value={totalTodo + totalIP}
+              sub={`${totalIP} in progress`}
+              color="rgba(245,158,11,0.7), rgba(217,119,6,0.9)"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Productivity"
+              value={`${productivity}%`}
+              sub="Completion rate"
+              color="rgba(124,58,237,0.7), rgba(37,99,235,0.9)"
+              gradient
+            />
           </div>
-          <MiniBar label="To Do" value={totalTodo} max={totalTasks || 1} color="#64748b" />
-          <MiniBar label="In Progress" value={totalIP} max={totalTasks || 1} color="#f59e0b" />
-          <MiniBar label="Completed" value={totalDone} max={totalTasks || 1} color="#10b981" />
 
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(30,58,95,0.4)' }}>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <div style={{ flex: 1, textAlign: 'center', padding: '12px', borderRadius: '10px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#a78bfa' }}>{totalTasks}</p>
-                <p style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>Total Tasks</p>
-              </div>
-              <div style={{ flex: 1, textAlign: 'center', padding: '12px', borderRadius: '10px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34d399' }}>{productivity}%</p>
-                <p style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px' }}>Done Rate</p>
-              </div>
+          {/* Top Performers */}
+          <Card style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <Trophy size={20} color="#fbbf24" />
+              <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top Performers</h3>
             </div>
-          </div>
-        </Card>
-      </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {topMembers.map((member, idx) => (
+                <div key={member.id} style={{
+                  background: 'rgba(10,22,40,0.8)',
+                  border: '1px solid rgba(30,58,95,0.5)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <Rank rank={idx + 1} />
+                  </div>
+                  <div style={{
+                    width: '48px', height: '48px',
+                    borderRadius: '12px',
+                    background: `linear-gradient(135deg, ${member.color})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontWeight: 700, fontSize: '1rem',
+                    margin: '0 auto 12px',
+                  }}>
+                    {member.avatar}
+                  </div>
+                  <h4 style={{ color: 'white', fontWeight: 700, marginBottom: '4px' }}>{member.name}</h4>
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px' }}>{member.role}</p>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
+                    fontSize: '0.8rem', color: '#cbd5e1',
+                  }}>
+                    <div>Points: <span style={{ color: '#60a5fa', fontWeight: 700 }}>{member.livePoints}</span></div>
+                    <div>Tasks: <span style={{ color: '#34d399', fontWeight: 700 }}>{member.liveCompleted}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

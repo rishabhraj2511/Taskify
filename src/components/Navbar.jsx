@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { Search, Bell, Plus, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, Bell, Plus, Sparkles, TrendingUp, Moon, Sun, Menu } from 'lucide-react';
 import { useState } from 'react';
 
 const pageTitles = {
@@ -18,6 +18,10 @@ export default function Navbar({
   onSearchChange,
   onMarkAllNotificationsRead,
   onMarkNotificationRead,
+  isMobile = false,
+  onToggleSidebar,
+  preferences,
+  onThemeToggle,
 }) {
   const location = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
@@ -26,6 +30,7 @@ export default function Navbar({
 
   const userRecord = JSON.parse(localStorage.getItem('taskify.user') || '{}');
   const userRole = userRecord.role || 'TEAM_MEMBER';
+  const userName = userRecord.name || 'User';
   // Only leads, PMs and DMs can create tasks
   const canCreateTask = ['TEAM_LEAD', 'PROJECT_MANAGER', 'DELIVERY_MANAGER'].includes(userRole);
 
@@ -40,25 +45,31 @@ export default function Navbar({
     <header style={{
       position: 'fixed',
       top: 0,
-      left: '240px',
+      left: isMobile ? 0 : '240px',
       right: 0,
-      height: '64px',
-      background: 'rgba(2, 6, 23, 0.85)',
+      height: isMobile ? '62px' : '64px',
+      background: 'var(--bg-panel)',
       backdropFilter: 'blur(24px)',
-      borderBottom: '1px solid rgba(30,58,95,0.4)',
+      borderBottom: '1px solid var(--border-main)',
       display: 'flex',
       alignItems: 'center',
-      paddingInline: '24px',
-      gap: '16px',
+      paddingInline: isMobile ? '12px' : '24px',
+      gap: isMobile ? '10px' : '16px',
       zIndex: 40,
     }}>
+      {isMobile && (
+        <button className="btn-ghost mobile-only" onClick={onToggleSidebar} style={{ padding: '8px 10px' }}>
+          <Menu size={16} />
+        </button>
+      )}
+
       {/* Page Title */}
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: isMobile ? '0.98rem' : '1.1rem', fontWeight: 800, color: 'var(--text-strong)', letterSpacing: '-0.02em' }}>
             {page.title}
           </h1>
-          <div style={{
+          <div className="desktop-only" style={{
             display: 'flex', alignItems: 'center', gap: '4px',
             background: 'rgba(124,58,237,0.12)',
             border: '1px solid rgba(124,58,237,0.2)',
@@ -68,14 +79,15 @@ export default function Navbar({
             <span style={{ fontSize: '0.65rem', color: '#a78bfa', fontWeight: 600 }}>Live</span>
           </div>
         </div>
-        <p style={{ fontSize: '0.72rem', color: '#475569', marginTop: '1px' }}>{page.subtitle}</p>
+        {!isMobile && <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '1px' }}>{page.subtitle}</p>}
       </div>
 
       {/* Search Bar */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        background: 'rgba(10,22,40,0.8)',
-        border: '1px solid rgba(30,58,95,0.6)',
+        display: isMobile ? 'none' : 'flex',
+        alignItems: 'center', gap: '8px',
+        background: 'var(--bg-soft)',
+        border: '1px solid var(--border-main)',
         borderRadius: '10px', padding: '8px 14px',
         width: '220px',
         transition: 'all 0.2s',
@@ -87,13 +99,13 @@ export default function Navbar({
           placeholder="Search tasks..."
           style={{
             background: 'none', border: 'none', outline: 'none',
-            color: '#94a3b8', fontSize: '0.8rem', width: '100%',
+            color: 'var(--text-main)', fontSize: '0.8rem', width: '100%',
           }}
         />
       </div>
 
       {/* AI Insight chip */}
-      <div style={{
+      <div className="desktop-only" style={{
         display: 'flex', alignItems: 'center', gap: '6px',
         background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(37,99,235,0.1))',
         border: '1px solid rgba(124,58,237,0.25)',
@@ -104,9 +116,13 @@ export default function Navbar({
         <span style={{ fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>AI Insights</span>
       </div>
 
+      <button className="btn-ghost" onClick={onThemeToggle} style={{ padding: '8px 10px' }} title="Toggle theme">
+        {preferences?.theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+      </button>
+
       {/* Add Task Button */}
-      {location.pathname === '/tasks' && canCreateTask && (
-        <button className="btn-primary" onClick={onAddTask} style={{ whiteSpace: 'nowrap' }}>
+      {location.pathname === '/tasks' && canCreateTask && !isMobile && (
+        <button className="btn-primary desktop-only" onClick={onAddTask} style={{ whiteSpace: 'nowrap' }}>
           <Plus size={15} />
           New Task
         </button>
@@ -203,6 +219,36 @@ export default function Navbar({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="desktop-only" style={{
+        padding: '6px 10px',
+        borderRadius: '10px',
+        border: '1px solid var(--border-main)',
+        background: 'var(--bg-soft)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        minWidth: '130px',
+      }}>
+        <div style={{
+          width: '26px',
+          height: '26px',
+          borderRadius: '8px',
+          background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontWeight: 700,
+          fontSize: '0.7rem',
+        }}>
+          {userName.slice(0, 2).toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
+          <div style={{ fontSize: '0.64rem', color: 'var(--text-dim)', textTransform: 'capitalize' }}>{userRole.toLowerCase().replace('_', ' ')}</div>
+        </div>
       </div>
     </header>
   );

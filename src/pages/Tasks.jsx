@@ -1,12 +1,25 @@
 import { useOutletContext } from 'react-router-dom';
-import { useMemo, useState } from 'react';
-import { Plus, X, CheckCircle2, Clock, ListTodo, AlertTriangle } from 'lucide-react';
-import TaskCard from '../components/TaskCard';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Plus,
+  CheckCircle2,
+  Clock,
+  ListTodo,
+  AlertTriangle,
+  CalendarClock,
+  Sparkles,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import TaskList from '../components/TaskList';
+
+const MotionDiv = motion.div;
 
 const COLUMNS = [
-  { key: 'todo',       label: 'To Do',       icon: ListTodo,    color: '#64748b', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.25)' },
-  { key: 'inprogress', label: 'In Progress',  icon: Clock,       color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-  { key: 'done',       label: 'Done',         icon: CheckCircle2,color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
+  { key: 'todo', label: 'To Do', icon: ListTodo, color: '#64748b', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.25)' },
+  { key: 'inprogress', label: 'In Progress', icon: Clock, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+  { key: 'done', label: 'Done', icon: CheckCircle2, color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
 ];
 
 function AddTaskModal({ onClose, onAdd }) {
@@ -16,10 +29,18 @@ function AddTaskModal({ onClose, onAdd }) {
   const today = new Date().toISOString().split('T')[0];
 
   const handleSubmit = () => {
-    if (!form.title.trim()) { setError('Task title is required'); return; }
-    if (!form.deadline) { setError('Deadline is required'); return; }
+    if (!form.title.trim()) {
+      setError('Task title is required');
+      return;
+    }
+
+    if (!form.deadline) {
+      setError('Deadline is required');
+      return;
+    }
+
     onAdd({
-      id: 'task_' + Date.now(),
+      id: `task_${Date.now()}`,
       title: form.title.trim(),
       priority: form.priority,
       deadline: form.deadline,
@@ -27,118 +48,95 @@ function AddTaskModal({ onClose, onAdd }) {
       tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       points: form.priority === 'High' ? 40 : form.priority === 'Medium' ? 25 : 15,
     });
-    onClose();
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px',
-      animation: 'fadeIn 0.2s ease-out',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{
-        width: '100%', maxWidth: '480px',
-        background: 'rgba(5,12,26,0.98)',
-        border: '1px solid rgba(124,58,237,0.3)',
-        borderRadius: '20px',
-        padding: '28px',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(124,58,237,0.15)',
-        animation: 'slideUp 0.3s ease-out',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontWeight: 800, color: 'white', fontSize: '1.1rem' }}>Create New Task</h2>
-            <p style={{ fontSize: '0.72rem', color: '#475569', marginTop: '2px' }}>Add task to your kanban board</p>
-          </div>
-          <button onClick={onClose} style={{ background: 'rgba(30,58,95,0.4)', border: '1px solid rgba(30,58,95,0.6)', color: '#94a3b8', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <X size={16} />
-          </button>
+    <Modal title="Create New Task" subtitle="Add a task with deadline, priority, and ownership" onClose={onClose}>
+      {error && (
+        <div style={{
+          padding: '10px 12px',
+          borderRadius: '10px',
+          background: 'rgba(239,68,68,0.1)',
+          border: '1px solid rgba(239,68,68,0.25)',
+          color: '#f87171',
+          fontSize: '0.8rem',
+          marginBottom: '14px',
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+        <div>
+          <label style={{ fontSize: '0.74rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px', fontWeight: 700 }}>Task Title</label>
+          <input
+            className="form-input"
+            value={form.title}
+            onChange={(e) => {
+              setForm(prev => ({ ...prev, title: e.target.value }));
+              setError('');
+            }}
+            placeholder="Ex: Prepare sprint retrospective notes"
+          />
         </div>
 
-        {error && (
-          <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: '0.8rem', marginBottom: '16px' }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Title */}
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Task Title *</label>
+            <label style={{ fontSize: '0.74rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px', fontWeight: 700 }}>Priority</label>
+            <select
+              className="form-input"
+              value={form.priority}
+              onChange={(e) => setForm(prev => ({ ...prev, priority: e.target.value }))}
+            >
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.74rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px', fontWeight: 700 }}>Due Date</label>
             <input
-              value={form.title}
-              onChange={e => { setForm(f => ({...f, title: e.target.value})); setError(''); }}
-              placeholder="e.g., Redesign landing page hero section"
-              style={{
-                width: '100%', padding: '10px 14px', borderRadius: '10px',
-                background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(30,58,95,0.7)',
-                color: 'white', fontSize: '0.875rem', outline: 'none',
+              className="form-input"
+              type="date"
+              min={today}
+              value={form.deadline}
+              onChange={(e) => {
+                setForm(prev => ({ ...prev, deadline: e.target.value }));
+                setError('');
               }}
-              autoFocus
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* Priority */}
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Priority</label>
-              <select
-                value={form.priority}
-                onChange={e => setForm(f => ({...f, priority: e.target.value}))}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(30,58,95,0.7)', color: 'white', fontSize: '0.875rem', outline: 'none', cursor: 'pointer' }}
-              >
-                <option value="High">🔴 High</option>
-                <option value="Medium">🟡 Medium</option>
-                <option value="Low">🟢 Low</option>
-              </select>
-            </div>
-            {/* Deadline */}
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Deadline *</label>
-              <input
-                type="date"
-                value={form.deadline}
-                min={today}
-                onChange={e => { setForm(f => ({...f, deadline: e.target.value})); setError(''); }}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(30,58,95,0.7)', color: 'white', fontSize: '0.875rem', outline: 'none' }}
-              />
-            </div>
-          </div>
-
-          {/* Assignee */}
-          <div>
-            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Assignee</label>
-            <input
-              value={form.assignee}
-              onChange={e => setForm(f => ({...f, assignee: e.target.value}))}
-              placeholder="e.g., Aria Chen"
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(30,58,95,0.7)', color: 'white', fontSize: '0.875rem', outline: 'none' }}
-            />
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tags (comma-separated)</label>
-            <input
-              value={form.tags}
-              onChange={e => setForm(f => ({...f, tags: e.target.value}))}
-              placeholder="e.g., Frontend, Bug, Design"
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(30,58,95,0.7)', color: 'white', fontSize: '0.875rem', outline: 'none' }}
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2, justifyContent: 'center' }}>
-            <Plus size={16} />
-            Create Task
-          </button>
+        <div>
+          <label style={{ fontSize: '0.74rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px', fontWeight: 700 }}>Assignee</label>
+          <input
+            className="form-input"
+            value={form.assignee}
+            onChange={(e) => setForm(prev => ({ ...prev, assignee: e.target.value }))}
+            placeholder="Ex: Sarah Miller"
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: '0.74rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px', fontWeight: 700 }}>Tags</label>
+          <input
+            className="form-input"
+            value={form.tags}
+            onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))}
+            placeholder="Ex: UX, Bug, Frontend"
+          />
         </div>
       </div>
-    </div>
+
+      <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+        <Button variant="ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>Cancel</Button>
+        <Button style={{ flex: 2, justifyContent: 'center' }} onClick={handleSubmit}>
+          <Plus size={14} /> Create Task
+        </Button>
+      </div>
+    </Modal>
   );
 }
 
@@ -153,7 +151,14 @@ export default function Tasks() {
     searchQuery,
     preferences,
   } = useOutletContext();
+
   const [priorityFilter, setPriorityFilter] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setIsLoading(false), 350);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -177,45 +182,89 @@ export default function Tasks() {
   }, [tasks, normalizedSearch, priorityFilter]);
 
   const totalVisible = filteredTasks.todo.length + filteredTasks.inprogress.length + filteredTasks.done.length;
+  const totalTasks = tasks.todo.length + tasks.inprogress.length + tasks.done.length;
+  const completionRate = totalTasks > 0 ? Math.round((tasks.done.length / totalTasks) * 100) : 0;
+  const pendingCount = tasks.todo.length + tasks.inprogress.length;
 
-  // Count overdue tasks
-  const overdueCount = [...tasks.todo, ...tasks.inprogress].filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+  const overdueCount = [...tasks.todo, ...tasks.inprogress].filter(task => {
+    const days = Math.ceil((new Date(task.deadline) - new Date()) / (1000 * 60 * 60 * 24));
     return days < 0;
   }).length;
 
+  const smartHint = useMemo(() => {
+    if (!preferences.enableAiHints) {
+      return '';
+    }
+
+    if (pendingCount >= 8) {
+      return 'You have too many pending tasks today. Try closing two high-priority items first.';
+    }
+
+    if (overdueCount > 0) {
+      return `You have ${overdueCount} overdue task${overdueCount > 1 ? 's' : ''}. Prioritize deadlines before new work.`;
+    }
+
+    if (completionRate >= 75) {
+      return 'Great momentum. Keep this pace to finish your sprint strongly.';
+    }
+
+    return 'Tip: Move one task from To Do to In Progress to start momentum.';
+  }, [completionRate, overdueCount, pendingCount, preferences.enableAiHints]);
+
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
-            Kanban Board
-          </h2>
-          <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
-            {COLUMNS.map(col => (
-              <span key={col.key} style={{ fontSize: '0.75rem', color: col.color, fontWeight: 600 }}>
-                {tasks[col.key].length} {col.label}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {overdueCount > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
-              <AlertTriangle size={13} color="#f87171" />
-              <span style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: 600 }}>{overdueCount} Overdue</span>
+      <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        <div className="glass-card" style={{ borderRadius: '14px', padding: '16px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-strong)', letterSpacing: '-0.02em' }}>Task Workspace</h2>
+          <p style={{ color: 'var(--text-dim)', marginTop: '6px', fontSize: '0.82rem' }}>
+            Card-based task board with smart prioritization and smooth transitions.
+          </p>
+          {smartHint && (
+            <div style={{
+              marginTop: '12px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              borderRadius: '10px',
+              border: '1px solid rgba(124,58,237,0.25)',
+              background: 'rgba(124,58,237,0.1)',
+              padding: '10px',
+              color: '#c4b5fd',
+              fontSize: '0.77rem',
+              lineHeight: 1.45,
+            }}>
+              <Sparkles size={14} style={{ marginTop: '2px' }} />
+              <span>{smartHint}</span>
             </div>
           )}
-          <button className="btn-primary" onClick={() => setShowAddTask(true)}>
-            <Plus size={15} />
-            Add Task
-          </button>
+        </div>
+
+        <div className="glass-card" style={{ borderRadius: '14px', padding: '16px' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Completion</div>
+          <div style={{ marginTop: '10px', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-strong)' }}>{completionRate}%</div>
+          <div className="progress-bar" style={{ marginTop: '10px' }}>
+            <div className="progress-fill" style={{ width: `${completionRate}%`, background: 'linear-gradient(90deg, #10b981, #2563eb)' }} />
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Due Pressure</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.84rem' }}>
+            <span style={{ color: 'var(--text-dim)' }}>Pending</span>
+            <strong style={{ color: 'var(--text-strong)' }}>{pendingCount}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '0.84rem' }}>
+            <span style={{ color: '#f87171' }}>Overdue</span>
+            <strong style={{ color: '#f87171' }}>{overdueCount}</strong>
+          </div>
+          <Button style={{ marginTop: '10px', justifyContent: 'center' }} onClick={() => setShowAddTask(true)}>
+            <Plus size={14} /> Add Task
+          </Button>
         </div>
       </div>
 
       <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {['All', 'High', 'Medium', 'Low'].map((value) => (
             <button
               key={value}
@@ -223,9 +272,9 @@ export default function Tasks() {
               style={{
                 padding: '6px 10px',
                 borderRadius: '8px',
-                border: priorityFilter === value ? '1px solid rgba(124,58,237,0.35)' : '1px solid rgba(30,58,95,0.55)',
-                background: priorityFilter === value ? 'rgba(124,58,237,0.16)' : 'rgba(10,22,40,0.65)',
-                color: priorityFilter === value ? '#a78bfa' : '#94a3b8',
+                border: priorityFilter === value ? '1px solid rgba(124,58,237,0.35)' : '1px solid var(--border-main)',
+                background: priorityFilter === value ? 'rgba(124,58,237,0.16)' : 'var(--bg-soft)',
+                color: priorityFilter === value ? '#a78bfa' : 'var(--text-dim)',
                 fontSize: '0.72rem',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -236,103 +285,117 @@ export default function Tasks() {
           ))}
         </div>
 
-        <div style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 600 }}>
+        <div style={{ color: 'var(--text-dim)', fontSize: '0.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CalendarClock size={14} />
           Showing {totalVisible} task{totalVisible === 1 ? '' : 's'}
         </div>
       </div>
 
-      {/* Kanban Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
-        {COLUMNS.map(col => {
-          const Icon = col.icon;
-          return (
-            <div key={col.key} style={{
-              background: col.bg,
-              border: `1px solid ${col.border}`,
-              borderRadius: '16px',
-                padding: preferences.compactCards ? '12px' : '16px',
-              minHeight: '500px',
-            }}>
-              {/* Column header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Icon size={16} color={col.color} />
-                  <span style={{ fontWeight: 700, color: col.color, fontSize: '0.875rem' }}>{col.label}</span>
-                </div>
-                <div style={{
-                  minWidth: '24px', height: '24px',
-                  background: col.bg, border: `1px solid ${col.border}`,
-                  borderRadius: '6px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.72rem', fontWeight: 700, color: col.color, padding: '0 6px',
-                }}>
-                  {filteredTasks[col.key].length}
-                </div>
-              </div>
+      {isLoading ? (
+        <div className="glass-card" style={{ borderRadius: '14px', padding: '22px', textAlign: 'center', color: 'var(--text-dim)' }}>
+          Loading task board...
+        </div>
+      ) : (
+        <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', alignItems: 'start' }}>
+          {COLUMNS.map((col) => {
+            const Icon = col.icon;
+            const columnTasks = filteredTasks[col.key];
 
-              {/* Task cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {filteredTasks[col.key].length === 0 ? (
+            return (
+              <MotionDiv
+                key={col.key}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  background: col.bg,
+                  border: `1px solid ${col.border}`,
+                  borderRadius: '16px',
+                  padding: preferences.compactCards ? '12px' : '16px',
+                  minHeight: '420px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon size={16} color={col.color} />
+                    <span style={{ fontWeight: 700, color: col.color, fontSize: '0.87rem' }}>{col.label}</span>
+                  </div>
                   <div style={{
-                    textAlign: 'center', padding: '32px 16px',
-                    border: `2px dashed ${col.border}`, borderRadius: '12px',
-                    color: '#334155',
+                    minWidth: '24px',
+                    height: '24px',
+                    border: `1px solid ${col.border}`,
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: col.color,
+                    paddingInline: '6px',
                   }}>
-                    <Icon size={24} style={{ margin: '0 auto 8px', opacity: 0.4, display: 'block' }} color={col.color} />
-                    <p style={{ fontSize: '0.78rem', color: '#475569' }}>
-                      {normalizedSearch || priorityFilter !== 'All' ? 'No matching tasks' : 'No tasks here'}
+                    {columnTasks.length}
+                  </div>
+                </div>
+
+                {columnTasks.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '28px 14px',
+                    border: `2px dashed ${col.border}`,
+                    borderRadius: '12px',
+                    color: 'var(--text-dim)',
+                  }}>
+                    <Icon size={24} style={{ margin: '0 auto 8px', opacity: 0.45, display: 'block' }} color={col.color} />
+                    <p style={{ fontSize: '0.78rem', lineHeight: 1.4 }}>
+                      {normalizedSearch || priorityFilter !== 'All' ? 'No matching tasks found' : 'No tasks in this column'}
                     </p>
                     {col.key === 'todo' && (
-                      <button
-                        className="btn-ghost"
-                        onClick={() => setShowAddTask(true)}
-                        style={{ marginTop: '12px', fontSize: '0.72rem', padding: '6px 12px' }}
-                      >
+                      <Button variant="ghost" style={{ marginTop: '10px' }} onClick={() => setShowAddTask(true)}>
                         <Plus size={12} /> Add Task
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ) : (
-                  filteredTasks[col.key].map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      column={col.key}
-                      onMove={moveTask}
-                      onDelete={deleteTask}
-                    />
-                  ))
+                  <TaskList
+                    tasks={columnTasks}
+                    column={col.key}
+                    onMove={moveTask}
+                    onDelete={deleteTask}
+                  />
                 )}
-              </div>
 
-              {/* Add task button per column */}
-              {col.key === 'todo' && filteredTasks[col.key].length > 0 && (
-                <button
-                  onClick={() => setShowAddTask(true)}
-                  style={{
-                    width: '100%', marginTop: '10px',
-                    padding: '8px', borderRadius: '10px',
-                    background: 'rgba(124,58,237,0.08)',
-                    border: '1px dashed rgba(124,58,237,0.3)',
-                    color: '#7c3aed', fontSize: '0.78rem', fontWeight: 600,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <Plus size={13} /> Add Task
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {col.key === 'todo' && columnTasks.length > 0 && (
+                  <Button variant="secondary" onClick={() => setShowAddTask(true)} style={{ width: '100%', marginTop: '10px' }}>
+                    <Plus size={13} /> Add another task
+                  </Button>
+                )}
+              </MotionDiv>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Add Task Modal */}
       {showAddTask && (
         <AddTaskModal
           onClose={() => setShowAddTask(false)}
-          onAdd={(task) => { addTask(task); setShowAddTask(false); }}
+          onAdd={(task) => {
+            addTask(task);
+            setShowAddTask(false);
+          }}
         />
+      )}
+
+      {!isLoading && totalTasks === 0 && (
+        <div className="glass-card" style={{ marginTop: '16px', borderRadius: '14px', padding: '24px', textAlign: 'center' }}>
+          <AlertTriangle size={18} color="#a78bfa" style={{ marginBottom: '8px' }} />
+          <h3 style={{ color: 'var(--text-strong)', fontSize: '0.98rem', fontWeight: 800 }}>No tasks yet</h3>
+          <p style={{ color: 'var(--text-dim)', marginTop: '6px', fontSize: '0.84rem' }}>
+            Start by creating your first task and assigning a due date.
+          </p>
+          <Button style={{ marginTop: '10px' }} onClick={() => setShowAddTask(true)}>
+            <Plus size={14} /> Create first task
+          </Button>
+        </div>
       )}
     </div>
   );

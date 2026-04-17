@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import { Bell, Zap, Shield, Palette } from 'lucide-react';
+import { Bell, Zap, Shield, Palette, Moon, Sun } from 'lucide-react';
 import Card from '../components/Card';
 
 function Toggle({ checked, onChange, label }) {
@@ -125,9 +125,18 @@ export default function Settings() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Card style={{ padding: '20px' }}>
           <SectionHeader icon={Palette} title="Display" />
+          <Toggle
+            checked={preferences.theme === 'dark'}
+            onChange={(checked) => updatePreference('theme', checked ? 'dark' : 'light')}
+            label={`Theme: ${preferences.theme === 'dark' ? 'Dark' : 'Light'}`}
+          />
+          <p style={{ fontSize: '0.68rem', color: '#475569', marginTop: '-8px', paddingBottom: '8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {preferences.theme === 'dark' ? <Moon size={12} /> : <Sun size={12} />} Quick theme switching for day and night use
+          </p>
+
           <Toggle
             checked={preferences.compactCards}
             onChange={(val) => updatePreference('compactCards', val)}

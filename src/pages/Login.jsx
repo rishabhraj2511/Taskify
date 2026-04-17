@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Zap } from 'lucide-react';
 import Card from '../components/Card';
+import Button from '../components/ui/Button';
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -15,6 +17,8 @@ export default function Login() {
       setError('Please fill in all fields');
       return;
     }
+
+    setIsLoading(true);
     
     // Check in users
     const existingUsers = JSON.parse(localStorage.getItem('taskify.users') || '[]');
@@ -28,9 +32,12 @@ export default function Login() {
 
     if (user) {
       localStorage.setItem('taskify.user', JSON.stringify(user));
-      navigate('/');
+      window.setTimeout(() => {
+        navigate('/');
+      }, 300);
     } else {
       setError('Invalid email or password');
+      setIsLoading(false);
     }
   };
 
@@ -46,7 +53,7 @@ export default function Login() {
         background: 'radial-gradient(circle at 50% 50%, rgba(124,58,237,0.15) 0%, transparent 40%)'
       }} />
 
-      <Card style={{ maxWidth: '400px', width: '100%', padding: '40px', position: 'relative', zIndex: 10 }}>
+      <Card style={{ maxWidth: '420px', width: '100%', padding: '34px', position: 'relative', zIndex: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '30px' }}>
           <div style={{
             width: '48px', height: '48px', borderRadius: '14px',
@@ -104,9 +111,24 @@ export default function Login() {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '12px', marginTop: '10px', fontSize: '0.95rem' }}>
-            Sign In
-          </button>
+          <Button type="submit" style={{ width: '100%', justifyContent: 'center', padding: '12px', marginTop: '10px', fontSize: '0.95rem' }}>
+            {isLoading ? 'Signing In...' : 'Sign In'}
+          </Button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
+            <span style={{ flex: 1, height: '1px', background: 'rgba(30,58,95,0.5)' }} />
+            <span style={{ color: '#64748b', fontSize: '0.72rem' }}>or</span>
+            <span style={{ flex: 1, height: '1px', background: 'rgba(30,58,95,0.5)' }} />
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '0.9rem' }}
+          >
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>G</span>
+            Continue with Google
+          </Button>
 
           <Link to="/forgot-password" style={{ textAlign: 'center', color: '#a78bfa', textDecoration: 'none', fontWeight: 600, fontSize: '0.8rem' }}>
             Forgot password?

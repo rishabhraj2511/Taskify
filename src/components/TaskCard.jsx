@@ -22,14 +22,15 @@ export default function TaskCard({ task, column, onMove, onDelete }) {
   const daysLeft = getDaysUntil(task.deadline);
   const isUrgent = daysLeft <= 1;
   const isDone = column === 'done';
+  const statusProgress = column === 'todo' ? 20 : column === 'inprogress' ? 60 : 100;
 
   const tagColors = ['rgba(124,58,237,0.15)', 'rgba(37,99,235,0.15)', 'rgba(6,182,212,0.15)', 'rgba(16,185,129,0.15)'];
 
   return (
     <div style={{
-      background: isDone ? 'rgba(16,185,129,0.05)' : isUrgent ? 'rgba(239,68,68,0.05)' : 'rgba(10,22,40,0.7)',
+      background: isDone ? 'rgba(16,185,129,0.05)' : isUrgent ? 'rgba(239,68,68,0.05)' : 'var(--bg-soft)',
       backdropFilter: 'blur(16px)',
-      border: `1px solid ${isDone ? 'rgba(16,185,129,0.2)' : isUrgent ? 'rgba(239,68,68,0.2)' : 'rgba(30,58,95,0.5)'}`,
+      border: `1px solid ${isDone ? 'rgba(16,185,129,0.2)' : isUrgent ? 'rgba(239,68,68,0.2)' : 'var(--border-main)'}`,
       borderRadius: '12px',
       padding: '14px',
       transition: 'all 0.25s ease',
@@ -77,19 +78,33 @@ export default function TaskCard({ task, column, onMove, onDelete }) {
 
       {/* Title */}
       <h4 style={{
-        fontSize: '0.85rem', fontWeight: 600, color: isDone ? '#94a3b8' : 'white',
+        fontSize: '0.85rem', fontWeight: 600, color: isDone ? 'var(--text-dim)' : 'var(--text-strong)',
         lineHeight: '1.3', marginBottom: '10px',
         textDecoration: isDone ? 'line-through' : 'none',
       }}>
         {task.title}
       </h4>
 
+      <div style={{ marginBottom: '10px' }}>
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${statusProgress}%`,
+              background: isDone
+                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                : 'linear-gradient(90deg, #7c3aed, #3b82f6)',
+            }}
+          />
+        </div>
+      </div>
+
       {/* Tags */}
       {task.tags?.length > 0 && (
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
           {task.tags.map((tag, i) => (
             <span key={tag} style={{
-              fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8',
+              fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-dim)',
               background: tagColors[i % tagColors.length],
               padding: '2px 6px', borderRadius: '4px',
               border: '1px solid rgba(255,255,255,0.06)',
@@ -102,11 +117,11 @@ export default function TaskCard({ task, column, onMove, onDelete }) {
 
       {/* Meta */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: daysLeft < 0 ? '#f87171' : daysLeft <= 3 ? '#fbbf24' : '#64748b', fontSize: '0.72rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: daysLeft < 0 ? '#f87171' : daysLeft <= 3 ? '#fbbf24' : 'var(--text-dim)', fontSize: '0.72rem' }}>
           <Calendar size={11} />
           {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748b', fontSize: '0.72rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
           <User size={11} />
           {task.assignee.split(' ')[0]}
         </div>

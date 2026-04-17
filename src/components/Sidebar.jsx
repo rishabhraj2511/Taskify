@@ -13,12 +13,13 @@ const navItems = [
   { to: '/settings', icon: Settings,         label: 'Settings' },
 ];
 
-export default function Sidebar({ unreadCount = 0 }) {
+export default function Sidebar({ unreadCount = 0, isMobile = false, isOpen = false, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem('taskify.user');
+    onClose?.();
     navigate('/login');
   };
 
@@ -35,17 +36,19 @@ export default function Sidebar({ unreadCount = 0 }) {
         position: 'fixed',
         left: 0,
         top: 0,
-        background: 'rgba(5, 12, 26, 0.95)',
+        background: 'var(--bg-panel)',
         backdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(30, 58, 95, 0.5)',
+        borderRight: '1px solid var(--border-main)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 50,
         padding: '0',
+        transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(-105%)') : 'translateX(0)',
+        transition: 'transform 0.25s ease',
       }}
     >
       {/* Logo */}
-      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(30,58,95,0.4)' }}>
+      <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid var(--border-main)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
             width: '36px', height: '36px', borderRadius: '10px',
@@ -64,6 +67,16 @@ export default function Sidebar({ unreadCount = 0 }) {
             </div>
           </div>
         </div>
+
+        {isMobile && (
+          <button
+            className="btn-ghost"
+            onClick={onClose}
+            style={{ marginTop: '10px', width: '100%', justifyContent: 'center' }}
+          >
+            Close Menu
+          </button>
+        )}
 
         {/* AI Badge */}
         <div style={{
@@ -106,7 +119,7 @@ export default function Sidebar({ unreadCount = 0 }) {
         })}
       </nav>
 
-      <div style={{ padding: '12px', borderTop: '1px solid rgba(30,58,95,0.4)' }}>
+      <div style={{ padding: '12px', borderTop: '1px solid var(--border-main)' }}>
         {/* User profile */}
         <div style={{
           marginTop: '12px',

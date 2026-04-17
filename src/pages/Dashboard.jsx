@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { CheckCircle2, Clock, TrendingUp, Users, Trophy, Briefcase } from 'lucide-react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { CheckCircle2, Clock, TrendingUp, Users, Trophy, Briefcase, ArrowRight, Sparkles, ShieldCheck, TimerReset } from 'lucide-react';
 import Card from '../components/Card';
+import Button from '../components/ui/Button';
 import { initialTeams, initialProjects, teamMembers } from '../data/dummyData';
 import { buildLiveMemberStats } from '../utils/teamInsights';
 
@@ -37,6 +38,7 @@ function Rank({ rank }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const context = useOutletContext() || {};
   const { tasks: outletTasks } = context;
   const [user] = useState(() => {
@@ -121,6 +123,54 @@ export default function Dashboard() {
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
+      <Card gradient style={{ marginBottom: '16px', padding: '22px' }}>
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '14px', alignItems: 'center' }}>
+          <div>
+            <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', marginBottom: '8px' }}>
+              Your Productivity Hub
+            </p>
+            <h1 style={{ fontSize: '1.55rem', color: 'var(--text-strong)', lineHeight: 1.22, fontWeight: 800, letterSpacing: '-0.03em' }}>
+              Plan, prioritize, and ship tasks faster with Taskify
+            </h1>
+            <p style={{ marginTop: '8px', color: 'var(--text-dim)', fontSize: '0.84rem', maxWidth: '560px' }}>
+              Modern task workflow for teams and individuals with real-time alerts, visual progress, and actionable insights.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+              <Button onClick={() => navigate('/tasks')}>
+                Open Task Board <ArrowRight size={14} />
+              </Button>
+              <Button variant="secondary" onClick={() => navigate('/analytics')}>
+                View Analytics
+              </Button>
+            </div>
+          </div>
+
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+            {[
+              { icon: Sparkles, title: 'Smart Hints', text: 'Get lightweight suggestions based on pending load.' },
+              { icon: ShieldCheck, title: 'Stable Workflow', text: 'Focus mode, alerts, and priority views in one place.' },
+              { icon: TimerReset, title: 'Deadline Control', text: 'Stay ahead with due-date and overdue monitoring.' },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} style={{
+                  border: '1px solid rgba(124,58,237,0.24)',
+                  background: 'rgba(124,58,237,0.08)',
+                  borderRadius: '12px',
+                  padding: '10px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon size={14} color="#c4b5fd" />
+                    <strong style={{ fontSize: '0.8rem', color: 'var(--text-strong)' }}>{item.title}</strong>
+                  </div>
+                  <p style={{ marginTop: '4px', color: 'var(--text-dim)', fontSize: '0.74rem', lineHeight: 1.4 }}>{item.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
@@ -134,7 +184,7 @@ export default function Dashboard() {
       {/* ─── MANAGER VIEW ─── */}
       {user.role === 'MANAGER' && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
             <StatCard
               icon={Users}
               label="Total Teams"
@@ -172,7 +222,7 @@ export default function Dashboard() {
               <Trophy size={20} color="#fbbf24" />
               <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top 3 Performing Teams</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {topTeams.map((team, idx) => (
                 <div key={team.id} style={{
                   background: 'rgba(10,22,40,0.8)',
@@ -204,7 +254,7 @@ export default function Dashboard() {
       {/* ─── TEAM LEAD VIEW ─── */}
       {user.role === 'TEAM_LEAD' && teamLeadTeam && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
             <StatCard
               icon={Users}
               label="Team Members"
@@ -242,7 +292,7 @@ export default function Dashboard() {
               <Trophy size={20} color="#fbbf24" />
               <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top 3 Team Members</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {teamLeadMembers.map((member, idx) => (
                 <div key={member.id} style={{
                   background: 'rgba(10,22,40,0.8)',
@@ -283,7 +333,7 @@ export default function Dashboard() {
       {/* ─── TEAM MEMBER & PROJECT MANAGER VIEW ─── */}
       {(user.role === 'TEAM_MEMBER' || user.role === 'PROJECT_MANAGER') && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
             <StatCard
               icon={CheckCircle2}
               label="Completed"
@@ -314,7 +364,7 @@ export default function Dashboard() {
               <Trophy size={20} color="#fbbf24" />
               <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem' }}>Top Performers</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {topMembers.map((member, idx) => (
                 <div key={member.id} style={{
                   background: 'rgba(10,22,40,0.8)',

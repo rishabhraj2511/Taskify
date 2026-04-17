@@ -12,6 +12,7 @@ const defaultPreferences = {
   compactCards: false,
   enableAiHints: true,
   showBurnoutWarnings: true,
+  theme: 'dark',
 };
 
 function buildDefaultNotifications() {
@@ -62,7 +63,22 @@ export default function MainLayout() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [preferences, setPreferences] = useState(loadPreferences);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 1080);
   const lastAutoAlerts = useRef({ overdueKey: '', burnoutKey: '' });
+
+  useEffect(() => {
+    const onResize = () => {
+      const mobileNow = window.innerWidth <= 1080;
+      setIsMobile(mobileNow);
+      if (!mobileNow) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const unreadCount = useMemo(
     () => notifications.filter(n => !n.read).length,
@@ -76,6 +92,10 @@ export default function MainLayout() {
   useEffect(() => {
     localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(preferences));
   }, [preferences]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', preferences.theme === 'light' ? 'light' : 'dark');
+  }, [preferences.theme]);
 
   const pushToast = (message, tone = 'info') => {
     const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -195,16 +215,43 @@ export default function MainLayout() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#020617', overflow: 'hidden' }}>
+    <div className="app-shell">
       {/* Ambient background glows */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
         background: 'radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(37,99,235,0.05) 0%, transparent 40%)',
       }} />
 
-      <Sidebar unreadCount={unreadCount} />
+      <Sidebar
+        unreadCount={unreadCount}
+        isMobile={isMobile}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
 
-      <div style={{ flex: 1, marginLeft: '240px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+      {isMobile && isMobileSidebarOpen && (
+        <button
+          onClick={() => setIsMobileSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            border: 'none',
+            background: 'rgba(2, 6, 23, 0.45)',
+            zIndex: 35,
+          }}
+          aria-label="Close menu overlay"
+        />
+      )}
+
+      <div style={{
+        flex: 1,
+        marginLeft: isMobile ? 0 : '240px',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative',
+        zIndex: 1,
+      }}>
         <Navbar
           notifications={notifications}
           searchQuery={searchQuery}
@@ -212,12 +259,19 @@ export default function MainLayout() {
           onMarkAllNotificationsRead={markAllNotificationsRead}
           onMarkNotificationRead={markNotificationRead}
           onAddTask={() => setShowAddTask(true)}
+          isMobile={isMobile}
+          onToggleSidebar={() => setIsMobileSidebarOpen(v => !v)}
+          preferences={preferences}
+          onThemeToggle={() => setPreferences(prev => ({
+            ...prev,
+            theme: prev.theme === 'light' ? 'dark' : 'light',
+          }))}
         />
 
         <main style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '88px 24px 24px',
+          padding: isMobile ? '78px 14px 16px' : '88px 24px 24px',
         }}>
           <Outlet context={{
             tasks,
